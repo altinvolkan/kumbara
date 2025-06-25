@@ -1,0 +1,2 @@
+C:/Users/altin/kumbara/mobile_app_1/android/app/.cxx/Debug/m631hc6x/arm64-v8a/CMakeFiles/edit_cache.dir
+C:/Users/altin/kumbara/mobile_app_1/android/app/.cxx/Debug/m631hc6x/arm64-v8a/CMakeFiles/rebuild_cache.dir
