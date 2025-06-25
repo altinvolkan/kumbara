@@ -1,0 +1,81 @@
+# Kumbara Projesi - .gitignore
+
+# Node.js Backend
+backend/node_modules/
+backend/.env
+backend/dist/
+backend/logs/
+backend/*.log
+
+# Flutter Apps
+**/build/
+**/ios/Flutter/flutter_export_environment.sh
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+**/android/.gradle/
+**/android/gradle/wrapper/gradle-wrapper.jar
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/ios/Pods/
+**/ios/.symlinks/
+**/macos/Flutter/ephemeral/
+**/windows/flutter/ephemeral/
+**/linux/flutter/ephemeral/
+
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+pubspec.lock
+
+# Geçici dosyalar
+*.tmp
+*.temp
+*~
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Demo ve test dosyaları
+**/demo_*
+**/test_*
+
+# Mobile app backup klasörleri
+mobile-app-1-backup/
+mobile-app-2/
+mobile_app_1/
+MobileApp1/
+
+# ESP32 geçici dosyalar
+esp32/Arduino_IDE_Kurulum.md
+
+# Proje notları
+NOTLAR.txt
+
+# Veritabanı yedekleri
+*.db
+*.sqlite
+
+# Environment dosyaları
+.env
+.env.local
+.env.production
+
+# Logllar
+*.log
+logs/
