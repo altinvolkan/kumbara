@@ -157,6 +157,9 @@ router.post('/create-child', authMiddleware, async (req, res) => {
     // Hesabı çocuk kullanıcısına bağla
     account.linkedUserId = childUser._id;
     await account.save();
+    // Çocuğa da hesabı bağla
+    childUser.linkedAccount = account._id;
+    await childUser.save();
     console.log('Account linked to child:', account._id);
 
     res.status(201).json({
@@ -280,7 +283,7 @@ router.delete('/children/:childId', authMiddleware, async (req, res) => {
     );
 
     // Çocuk hesabını sil
-    await childUser.remove();
+    await User.deleteOne({ _id: childUser._id });
 
     res.json({ message: 'Çocuk hesabı başarıyla silindi' });
   } catch (error) {

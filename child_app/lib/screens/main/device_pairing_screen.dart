@@ -78,13 +78,18 @@ class _DevicePairingScreenState extends State<DevicePairingScreen> {
     String? deviceName = await _showDeviceNameDialog();
     if (deviceName == null || deviceName.trim().isEmpty) return;
 
+    // WiFi bilgileri dialog'u
+    Map<String, String>? wifiInfo = await _showWiFiConfigDialog();
+    if (wifiInfo == null) return;
+
     try {
       setState(() {
         _isPairing = true;
         _pairingDeviceId = device.remoteId.str;
       });
 
-      final result = await _deviceService.pairDevice(device, deviceName.trim());
+      final result =
+          await _deviceService.pairDevice(device, deviceName.trim(), wifiInfo);
 
       if (result['success']) {
         Get.snackbar(
@@ -141,6 +146,61 @@ class _DevicePairingScreenState extends State<DevicePairingScreen> {
           ),
           ElevatedButton(
             onPressed: () => Get.back(result: deviceName),
+            child: const Text('Tamam'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<Map<String, String>?> _showWiFiConfigDialog() async {
+    String ssid = '';
+    String password = '';
+
+    return await Get.dialog<Map<String, String>>(
+      AlertDialog(
+        title: const Text('WiFi Ayarları'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('ESP32\'nin bağlanacağı WiFi bilgilerini girin:'),
+            const SizedBox(height: 16),
+            TextField(
+              onChanged: (value) => ssid = value,
+              decoration: const InputDecoration(
+                labelText: 'WiFi Adı (SSID)',
+                hintText: 'Örn: EVWiFi',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.wifi),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              onChanged: (value) => password = value,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'WiFi Şifresi',
+                hintText: 'WiFi şifrenizi girin',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.lock),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (ssid.trim().isEmpty) {
+                Get.snackbar('Hata', 'WiFi adı gerekli!',
+                    backgroundColor: Colors.red, colorText: Colors.white);
+                return;
+              }
+              Get.back(result: {'ssid': ssid.trim(), 'password': password});
+            },
             child: const Text('Tamam'),
           ),
         ],

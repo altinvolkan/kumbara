@@ -616,10 +616,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     color: progressColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
-                    _getCategoryIcon(goal.category),
-                    color: progressColor,
-                    size: 24,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        goal.icon,
+                        style: const TextStyle(fontSize: 18),
+                      ),
+                      const SizedBox(height: 2),
+                      Icon(
+                        _getCategoryIcon(goal.category),
+                        color: progressColor,
+                        size: 20,
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -767,6 +777,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return Icons.school_rounded;
       case 'travel':
         return Icons.flight_rounded;
+      case 'games':
+      case 'game':
+        return Icons.sports_esports_rounded;
+      case 'book':
+      case 'books':
+      case 'kitap':
+        return Icons.menu_book_rounded;
       default:
         return Icons.star_rounded;
     }

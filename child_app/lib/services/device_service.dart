@@ -75,8 +75,8 @@ class DeviceService {
   }
 
   // ESP32 cihazına bağlan ve yapılandır
-  Future<Map<String, dynamic>> pairDevice(
-      BluetoothDevice device, String deviceName) async {
+  Future<Map<String, dynamic>> pairDevice(BluetoothDevice device,
+      String deviceName, Map<String, String> wifiInfo) async {
     try {
       print('DeviceService: ${device.platformName} cihazına bağlanılıyor...');
 
@@ -125,8 +125,8 @@ class DeviceService {
       // WiFi ve kullanıcı bilgilerini ESP32'ye gönder
       final configData = {
         'action': 'configure',
-        'ssid': 'WIFI_SSID', // Kullanıcıdan alınacak
-        'password': 'WIFI_PASSWORD', // Kullanıcıdan alınacak
+        'ssid': wifiInfo['ssid']!,
+        'password': wifiInfo['password']!,
         'server': 'http://192.168.1.21:3000',
         'userId': user.id,
         'deviceName': deviceName,

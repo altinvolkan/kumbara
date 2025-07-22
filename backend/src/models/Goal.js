@@ -56,7 +56,7 @@ const goalSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['toy', 'electronics', 'clothes', 'sport', 'education', 'travel', 'other'],
+    enum: ['toy', 'electronics', 'clothes', 'sport', 'education', 'travel', 'other', 'game', 'games', 'book', 'books', 'money', 'car', 'house', 'phone', 'food', 'art', 'music'],
     default: 'other',
   },
   createdAt: {

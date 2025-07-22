@@ -76,8 +76,24 @@ router.post('/', authMiddleware, async (req, res) => {
   try {
     const { name, targetAmount, description, icon, targetDate, priority, isVisible, isParallel, color, category } = req.body;
     
+    console.log('=== GOAL CREATION DEBUG ===');
+    console.log('User ID:', req.user._id);
+    console.log('User Role:', req.user.role);
+    console.log('User Parent:', req.user.parent);
+    console.log('Goal Data:', { name, targetAmount, description, icon, category });
+    
     if (!name || !targetAmount) {
+      console.log('ERROR: Missing required fields');
       return res.status(400).json({ error: 'Eksik bilgi' });
+    }
+    
+    // Multiple children kontrolü
+    if (req.user.role === 'child') {
+      const existingGoals = await Goal.countDocuments({ 
+        owner: req.user._id, 
+        status: 'active' 
+      });
+      console.log('Existing active goals for child:', existingGoals);
     }
     
     const goal = new Goal({
@@ -96,9 +112,13 @@ router.post('/', authMiddleware, async (req, res) => {
       category: category || 'other',
     });
     
+    console.log('Goal object before save:', goal);
     await goal.save();
+    console.log('Goal saved successfully with ID:', goal._id);
+    
     res.status(201).json(goal);
   } catch (error) {
+    console.error('GOAL CREATION ERROR:', error);
     res.status(400).json({ error: error.message });
   }
 });

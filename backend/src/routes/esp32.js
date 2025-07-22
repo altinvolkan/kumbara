@@ -2,12 +2,115 @@ import express from 'express';
 import mongoose from 'mongoose';
 import { Device } from '../models/Device.js';
 import { Account } from '../models/Account.js';
+import { Goal } from '../models/Goal.js';
+import { User } from '../models/User.js';
 
 const router = express.Router();
 
 // ESP32 health check
 router.get('/health', (req, res) => {
   res.json({ status: 'ESP32 Route OK' });
+});
+
+// ESP32 için kullanıcı hedefleri endpoint'i
+router.get('/goals/user/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    console.log('ESP32 Goals Request for userId:', userId);
+    
+    // User'ı bul
+    const user = await User.findById(userId);
+    if (!user) {
+      console.log('User not found:', userId);
+      return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
+    }
+    
+    // Toplam hedef sayısını al (ESP32 display için)
+    const totalCount = await Goal.countDocuments({ 
+      owner: userId, 
+      isVisible: true,
+      status: 'active'
+    });
+    
+    // İlk 15 hedefi getir (ESP32 memory limit)
+    const goals = await Goal.find({ 
+      owner: userId, 
+      isVisible: true,
+      status: 'active'
+    }).sort({ priority: 1, createdAt: -1 }).limit(15);
+    
+    console.log('Found goals for ESP32:', goals.length, '/', totalCount);
+    
+    // Emoji'leri ESP32'nin anlayabileceği string'lere dönüştür
+    const emojiToString = (emoji) => {
+      const emojiMap = {
+        '🧸': 'toy',
+        '📚': 'book',
+        '📱': 'phone',
+        '⚽': 'sport',
+        '👕': 'clothes',
+        '🎮': 'game',
+        '🚗': 'car',
+        '🏠': 'house',
+        '✈️': 'travel',
+        '💻': 'electronics',
+        '💰': 'money',
+        '⭐': 'default',
+        '🎨': 'art',
+        '🎵': 'music',
+        '🍕': 'food',
+        'other': 'default',
+        'art': 'art',
+        'music': 'music',
+        'food': 'food',
+        'games': 'game',
+        'game': 'game',
+        'gamepad': 'game',
+        'game_controller': 'game',
+        'oyun_kolu': 'game',
+        'oyun kolu': 'game',
+        'controller': 'game',
+        'game controller': 'game',
+        'joystick': 'game',
+        'toy': 'toy',
+        'book': 'book',
+        'electronics': 'electronics',
+        'sports': 'sport',
+        'clothes': 'clothes',
+        'travel': 'travel',
+        'education': 'book',
+        'default': 'default',
+      };
+      return emojiMap[emoji] || 'default';
+    };
+
+    // ESP32 için basit format
+    const esp32Goals = goals.map(goal => {
+      const convertedIcon = emojiToString(goal.icon) || emojiToString(goal.category) || 'default';
+      console.log(`Goal: ${goal.name} | Original icon: ${goal.icon} | Category: ${goal.category} | Converted: ${convertedIcon}`);
+      
+      return {
+        id: goal._id,
+        name: goal.name,
+        current: goal.currentAmount || 0,
+        target: goal.targetAmount || 1,
+        icon: convertedIcon,
+        progress: Math.round(((goal.currentAmount || 0) / (goal.targetAmount || 1)) * 100)
+      };
+    });
+    
+    res.json({
+      success: true,
+      goals: esp32Goals,
+      count: esp32Goals.length,
+      totalCount: totalCount
+    });
+    
+  } catch (error) {
+    console.error('Error in ESP32 goals:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // ESP32'den para işlemi (transaction) endpoint'i
