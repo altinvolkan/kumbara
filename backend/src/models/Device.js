@@ -73,6 +73,22 @@ const deviceSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  pendingCommands: [
+    {
+      type: {
+        type: String,
+        required: true
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now
+      },
+      payload: {
+        type: mongoose.Schema.Types.Mixed,
+        default: {}
+      }
+    }
+  ],
   createdAt: {
     type: Date,
     default: Date.now,

@@ -270,13 +270,70 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ],
                           ),
                         ),
+                        // Unlock butonu (backend üzerinden)
                         IconButton(
-                          onPressed: _syncGoalsToESP32,
+                          onPressed: () async {
+                            String? deviceId;
+                            if (_linkedAccount != null &&
+                                _linkedAccount!['deviceId'] != null) {
+                              deviceId = _linkedAccount!['deviceId'];
+                            } else {
+                              // Cihazlar listesinden ilk cihazı çek
+                              final devices =
+                                  await _deviceService.getUserDevices();
+                              if (devices.isNotEmpty &&
+                                  devices.first['deviceId'] != null) {
+                                deviceId = devices.first['deviceId'];
+                              }
+                            }
+                            if (deviceId == null) {
+                              Get.snackbar(
+                                'Hata',
+                                'Cihaz ID bulunamadı',
+                                backgroundColor: Colors.red,
+                                colorText: Colors.white,
+                                duration: const Duration(seconds: 3),
+                              );
+                              return;
+                            }
+                            Get.dialog(
+                              const AlertDialog(
+                                content: Row(
+                                  children: [
+                                    CircularProgressIndicator(),
+                                    SizedBox(width: 20),
+                                    Text('Kasa açılıyor...'),
+                                  ],
+                                ),
+                              ),
+                              barrierDismissible: false,
+                            );
+                            bool result = await _deviceService
+                                .unlockSafeBackend(deviceId);
+                            Get.back();
+                            if (result) {
+                              Get.snackbar(
+                                'Kasa Açıldı',
+                                'Kasa açma komutu başarıyla gönderildi',
+                                backgroundColor: Colors.green,
+                                colorText: Colors.white,
+                                duration: const Duration(seconds: 3),
+                              );
+                            } else {
+                              Get.snackbar(
+                                'Hata',
+                                'Kasa açma komutu gönderilemedi',
+                                backgroundColor: Colors.red,
+                                colorText: Colors.white,
+                                duration: const Duration(seconds: 3),
+                              );
+                            }
+                          },
                           icon: const Icon(
-                            Icons.sync,
+                            Icons.lock_open_rounded,
                             color: Colors.white,
                           ),
-                          tooltip: 'ESP32\'ye Hedefleri Gönder',
+                          tooltip: 'Kasayı Aç',
                         ),
                         IconButton(
                           onPressed: () =>

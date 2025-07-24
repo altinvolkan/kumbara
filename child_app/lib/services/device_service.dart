@@ -206,8 +206,9 @@ class DeviceService {
       );
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.cast<Map<String, dynamic>>();
+        final data = json.decode(response.body);
+        // 'devices' anahtarını kullan!
+        return List<Map<String, dynamic>>.from(data['devices']);
       } else {
         throw Exception('Cihazlar getirilemedi');
       }
@@ -331,6 +332,30 @@ class DeviceService {
       return true;
     } catch (e) {
       print('DeviceService: Hedef gönderme hatası - $e');
+      return false;
+    }
+  }
+
+  // Backend'e kasa açma komutu gönder
+  Future<bool> unlockSafeBackend(String deviceId) async {
+    try {
+      final token = await AuthService().getToken();
+      if (token == null) throw Exception('Token bulunamadı');
+      final response = await http.post(
+        Uri.parse('$baseUrl/devices/$deviceId/unlock'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        print('unlockSafeBackend error: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('unlockSafeBackend exception: $e');
       return false;
     }
   }

@@ -398,4 +398,35 @@ router.post('/transaction', async (req, res) => {
   }
 });
 
+// Kasa açma komutu ekle (mobil uygulama çağırır)
+router.post('/:deviceId/unlock', async (req, res) => {
+  try {
+    const device = await Device.findOne({ deviceId: req.params.deviceId });
+    if (!device) {
+      return res.status(404).json({ error: 'Cihaz bulunamadı' });
+    }
+    device.pendingCommands.push({ type: 'unlock', createdAt: new Date(), payload: {} });
+    await device.save();
+    res.json({ success: true, message: 'Kasa açma komutu eklendi' });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// ESP32 komutları çeksin (polling)
+router.get('/:deviceId/commands', async (req, res) => {
+  try {
+    const device = await Device.findOne({ deviceId: req.params.deviceId });
+    if (!device) {
+      return res.status(404).json({ error: 'Cihaz bulunamadı' });
+    }
+    const commands = device.pendingCommands || [];
+    device.pendingCommands = [];
+    await device.save();
+    res.json({ success: true, commands });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 export default router; 
