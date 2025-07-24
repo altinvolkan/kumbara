@@ -18,6 +18,8 @@
  #include <BLE2902.h>
  #include <ArduinoJson.h>
  #include <Preferences.h>
+ #include <ArduinoWebsockets.h> // WebSocket client
+ using namespace websockets;
  
  // *** TFT_eSPI Unicode/Turkish Font Support ***
  // User_Setup.h dosyasına şunları ekle:
@@ -50,7 +52,7 @@
  String WIFI_PASS = "";
  String SERVER_URL = "http://192.168.1.21:3000";
  String USER_ID = "6876b53f2c921b00d04b6b12"; // ELLE SABİTLENDİ
- String DEVICE_NAME = "e469eb41";
+ String DEVICE_NAME = "e469eb41"; // HER ZAMAN SABİT
  
  // Colors
  #define BLACK 0x0000
@@ -157,6 +159,39 @@
      }
  };
  
+ WebsocketsClient wsClient;
+ bool wsConnected = false;
+
+ void onWebSocketMessageCallback(WebsocketsMessage message) {
+   Serial.print("[WS] Mesaj alındı: ");
+   Serial.println(message.data());
+   // Unlock komutu kontrolü
+   if (message.data() == "unlock") {
+     Serial.println("[WS] UNLOCK KOMUTU ALGILANDI!");
+     digitalWrite(PIN_SAFE_OPEN, LOW);
+     drawSafeOpeningScreen();
+     delay(5000);
+     digitalWrite(PIN_SAFE_OPEN, HIGH);
+     needsDisplayUpdate = true;
+     Serial.println("[WS] Unlock işlemi tamamlandı, pin HIGH.");
+   }
+ }
+
+ void connectWebSocket() {
+   String wsUrl = SERVER_URL;
+   wsUrl.replace("http://", "ws://");
+   wsUrl += "/unlock/" + DEVICE_NAME;
+   Serial.print("[WS] Bağlanıyor: ");
+   Serial.println(wsUrl);
+   wsClient.onMessage(onWebSocketMessageCallback);
+   wsConnected = wsClient.connect(wsUrl.c_str());
+   if (wsConnected) {
+     Serial.println("[WS] Saf WebSocket bağlantısı başarılı!");
+   } else {
+     Serial.println("[WS] WebSocket bağlantısı başarısız!");
+   }
+ }
+ 
  void setup() {
    Serial.begin(115200);
    delay(1000);
@@ -193,6 +228,10 @@
    pinMode(PIN_SAFE_DOOR_SW, INPUT_PULLUP);    // Kasa kapağı switch
    
    Serial.println("Setup complete, waiting for BLE config...");
+   // WiFi bağlantısı sonrası WebSocket'e bağlan
+   if (WiFi.status() == WL_CONNECTED) {
+     connectWebSocket();
+   }
  }
  
  void setupBLE() {
@@ -231,81 +270,14 @@
    Serial.println("BLE advertising started");
  }
  
- // --- Backend'den unlock komutu polling fonksiyonu ---
-void checkUnlockCommand() {
-  static bool isSafeOpening = false;
-  static unsigned long safeOpenStart = 0;
-  static bool unlockScreenDrawn = false;
-  // DEBUG: Polling fonksiyonu her çağrıldığında log bas
-  Serial.println("[UNLOCK POLL] Fonksiyon çağrıldı");
-  if (!isSafeOpening) {
-    // Komut kontrolü (her 2 saniyede bir)
-    static unsigned long lastCheck = 0;
-    if (millis() - lastCheck > 2000) {
-      lastCheck = millis();
-      Serial.println("[UNLOCK POLL] Kontrol zamanı geldi");
-      if (WiFi.status() == WL_CONNECTED) {
-        Serial.println("[UNLOCK POLL] WiFi bağlı, istek atılacak");
-        HTTPClient http;
-        String url = SERVER_URL + "/api/devices/" + DEVICE_NAME + "/commands";
-        http.begin(url);
-        int httpCode = http.GET();
-        Serial.print("[UNLOCK POLL] GET "); Serial.print(url); Serial.print(" -> "); Serial.println(httpCode);
-        if (httpCode == 200) {
-          String response = http.getString();
-          Serial.print("[UNLOCK POLL] Response: "); Serial.println(response);
-          DynamicJsonDocument doc(1024);
-          DeserializationError error = deserializeJson(doc, response);
-          if (error) {
-            Serial.print("[UNLOCK POLL] JSON parse error: "); Serial.println(error.c_str());
-          } else if (doc["success"] && doc["commands"].is<JsonArray>()) {
-            JsonArray commands = doc["commands"].as<JsonArray>();
-            for (JsonObject cmd : commands) {
-              if (cmd["type"] == "unlock") {
-                Serial.println("[UNLOCK POLL] UNLOCK KOMUTU ALGILANDI!");
-                isSafeOpening = true;
-                safeOpenStart = millis();
-                digitalWrite(PIN_SAFE_OPEN, LOW); // Kasa açma pini LOW
-                drawSafeOpeningScreen(); // Sadece bu ekranı göster
-                unlockScreenDrawn = true;
-                break;
-              }
-            }
-          } else {
-            Serial.println("[UNLOCK POLL] No unlock command in response.");
-          }
-        } else {
-          Serial.print("[UNLOCK POLL] HTTP error: "); Serial.println(httpCode);
-        }
-        http.end();
-      } else {
-        Serial.println("[UNLOCK POLL] WiFi bağlı değil, istek atılmayacak");
-      }
-    }
-  } else {
-    // 5 saniye boyunca sadece unlock ekranı ve pin LOW
-    if (!unlockScreenDrawn) {
-      drawSafeOpeningScreen();
-      unlockScreenDrawn = true;
-    }
-    if (millis() - safeOpenStart > 5000) {
-      digitalWrite(PIN_SAFE_OPEN, HIGH); // Kasa açma pini HIGH
-      isSafeOpening = false;
-      unlockScreenDrawn = false;
-      needsDisplayUpdate = true; // Diğer ekranlara dönebilir
-      Serial.println("[UNLOCK POLL] Unlock ekranı bitti, pin HIGH.");
-    }
-  }
-}
+ // --- POLLING FONKSİYONUNU TAMAMEN KALDIRIYORUM ---
+// void checkUnlockCommand() { /* kaldırıldı */ }
 
 void loop() {
-  // DEBUG: WiFi ve USER_ID durumunu yazdır
-  Serial.print("WiFi: ");
-  Serial.print(WiFi.status());
-  Serial.print(" | USER_ID: ");
-  Serial.println(USER_ID);
-
-  checkUnlockCommand(); // EN BAŞTA ÇAĞIR
+  // WebSocket bağlantısı varsa mesajları dinle
+  if (wsConnected) {
+    wsClient.poll();
+  }
 
   // Eğer unlock ekranı aktifse başka hiçbir şey çizme
   static bool unlockActive = false;
@@ -381,9 +353,6 @@ void loop() {
      needsDisplayUpdate = true;
    }
 
-   // --- KASA AÇMA KOMUTU (örnek: seri porttan 'open' komutu ile, ya da ileride backend komutundan tetiklenebilir) ---
-   // Bu kısım artık polling ile yönetiliyor, bu yüzden buraya gelmeyecek.
-
    // --- KASA KAPAĞI SWITCH ---
    static unsigned long lastDoorOpen = 0;
    if (digitalRead(PIN_SAFE_DOOR_SW) == LOW && millis() - lastDoorOpen > 1000) {
@@ -393,9 +362,8 @@ void loop() {
      needsDisplayUpdate = true;
    }
    
-   // checkUnlockCommand(); // Polling fonksiyonunu çağır - artık checkUnlockCommand içinde
    delay(100);
- }
+}
  
  void connectWiFi() {
    showStatusOnce("WiFi", "Baglanıyor...", BLUE);
@@ -420,6 +388,8 @@ void loop() {
        pStatusCharacteristic->setValue("WIFI_CONNECTED");
        pStatusCharacteristic->notify();
      }
+     // --- WebSocket bağlantısını burada kur ---
+     connectWebSocket();
    } else {
      showStatusOnce("WiFi", "Hata!", RED);
      Serial.println("\nWiFi connection failed!");
@@ -630,7 +600,7 @@ void loop() {
    WIFI_PASS = preferences.getString("wifi_pass", "");
    SERVER_URL = preferences.getString("server_url", "http://192.168.1.21:3000");
    USER_ID = preferences.getString("user_id", "");
-   DEVICE_NAME = preferences.getString("device_name", "e469eb41");
+   // DEVICE_NAME = preferences.getString("device_name", "e469eb41"); // ARTIK DEĞİŞMEYECEK
    
    preferences.end();
    

@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import winston from 'winston';
+import { WebSocketServer } from 'ws';
 
 // Routes
 import authRoutes from './routes/auth.js';
@@ -49,6 +50,7 @@ const io = new Server(httpServer, {
     methods: ['GET', 'POST'],
   },
 });
+app.set('io', io); // Socket.IO nesnesini app'e ekle
 
 // Middleware
 app.use(cors({
@@ -102,9 +104,44 @@ io.on('connection', (socket) => {
     logger.info(`Goal progress updated for device-${deviceId}, goal-${goalId}: ${progress}%`);
   });
 
+  // --- UNLOCK KOMUTU PUSH ---
+  socket.on('unlock-device', (deviceId) => {
+    io.to(`device-${deviceId}`).emit('unlock');
+    logger.info(`Unlock komutu push edildi: device-${deviceId}`);
+  });
+
   socket.on('disconnect', () => {
     logger.info('Client disconnected:', socket.id);
   });
+});
+
+// --- SAF WEBSOCKET UNLOCK PUSH ---
+const wsDeviceClients = new Map(); // deviceId -> ws
+const wss = new WebSocketServer({ noServer: true });
+
+wss.on('connection', (ws, req, deviceId) => {
+  wsDeviceClients.set(deviceId, ws);
+  ws.on('close', () => {
+    wsDeviceClients.delete(deviceId);
+  });
+  ws.on('message', (msg) => {
+    // Debug için logla
+    console.log(`[WS] ${deviceId} mesaj:`, msg.toString());
+  });
+  console.log(`[WS] Device ${deviceId} bağlandı`);
+});
+
+httpServer.on('upgrade', (request, socket, head) => {
+  const url = request.url || '';
+  const match = url.match(/^\/unlock\/(.+)$/);
+  if (match) {
+    const deviceId = match[1];
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit('connection', ws, request, deviceId);
+    });
+  } else {
+    socket.destroy();
+  }
 });
 
 // Error handling
@@ -128,3 +165,5 @@ mongoose
     logger.error('MongoDB connection error:', error);
     process.exit(1);
   }); 
+
+export { wsDeviceClients }; 

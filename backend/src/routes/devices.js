@@ -4,6 +4,7 @@ import { Transaction } from '../models/Transaction.js';
 import { Account } from '../models/Account.js';
 import { authMiddleware } from '../middleware/auth.js';
 import mongoose from 'mongoose';
+import { wsDeviceClients } from '../index.js';
 
 const router = express.Router();
 
@@ -407,6 +408,16 @@ router.post('/:deviceId/unlock', async (req, res) => {
     }
     device.pendingCommands.push({ type: 'unlock', createdAt: new Date(), payload: {} });
     await device.save();
+    // --- WebSocket push (Socket.IO) ---
+    if (req.app.get('io')) {
+      req.app.get('io').to(`device-${device.deviceId}`).emit('unlock');
+      console.log(`Unlock komutu push edildi: device-${device.deviceId}`);
+    }
+    // --- Saf WebSocket push ---
+    if (wsDeviceClients && wsDeviceClients.has(device.deviceId)) {
+      wsDeviceClients.get(device.deviceId).send('unlock');
+      console.log(`[WS] Saf WebSocket ile unlock push: ${device.deviceId}`);
+    }
     res.json({ success: true, message: 'Kasa açma komutu eklendi' });
   } catch (error) {
     res.status(400).json({ error: error.message });
