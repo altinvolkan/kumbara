@@ -1029,24 +1029,50 @@ void loop() {
    tft.drawString("$", 120, 120);
    tft.setTextColor(WHITE, BLACK);
    tft.setTextSize(2);
-   tft.drawString("Banknote Inserted", 120, 170);
+   tft.drawString("Banknot Algılandı", 120, 170); // Türkçeye çevrildi
  }
 
  void drawSafeOpeningScreen() {
-   tft.fillScreen(BLACK);
-   // Kasa kilidi açıldı görseli
-   tft.fillRect(90, 80, 60, 60, CYAN);
-   tft.drawRect(90, 80, 60, 60, WHITE);
-   tft.fillCircle(120, 110, 10, DARK_GRAY); // Kasa kilidi
-   tft.drawCircle(120, 110, 10, WHITE);
-   tft.setTextColor(BLACK, CYAN);
-   tft.setTextSize(2);
-   tft.setTextDatum(MC_DATUM);
-   tft.drawString("Safe Unlocked", 120, 110);
-   tft.setTextColor(WHITE, BLACK);
-   tft.setTextSize(1);
-   tft.drawString("Lock Opened", 120, 150);
- }
+  tft.fillScreen(BLACK);
+  int centerX = 120;
+  int centerY = 90;
+
+  // --- Kilit gövdesi (sarı, köşeleri yuvarlatılmış dikdörtgen) ---
+  int bodyW = 54, bodyH = 54;
+  int bodyX = centerX - bodyW/2;
+  int bodyY = centerY + 18;
+  tft.fillRoundRect(bodyX, bodyY, bodyW, bodyH, 8, YELLOW);
+  tft.drawRoundRect(bodyX, bodyY, bodyW, bodyH, 8, ORANGE);
+
+  // --- Açık kilit yayı (gri, üstte, bir ucu açık) ---
+  int arcR = 28;
+  int arcX = centerX;
+  int arcY = bodyY - 8;
+  // Yayı 220-320 derece arası çiz, sol ucu yukarıda açık
+  for (int i = 220; i <= 320; i += 2) {
+    float rad = i * 3.14159 / 180.0;
+    int x1 = arcX + cos(rad) * arcR;
+    int y1 = arcY + sin(rad) * arcR;
+    tft.drawPixel(x1, y1, LIGHT_GRAY);
+    tft.drawPixel(x1+1, y1, LIGHT_GRAY);
+    tft.drawPixel(x1, y1+1, LIGHT_GRAY);
+  }
+  // Halka ucu: sol üstte kısa bir dikey çizgi (açık)
+  tft.drawLine(arcX - arcR, arcY, arcX - arcR, arcY - 16, LIGHT_GRAY);
+
+  // --- Anahtar deliği (siyah daire ve altına küçük dikdörtgen) ---
+  int keyholeX = centerX;
+  int keyholeY = bodyY + bodyH/2 - 4;
+  tft.fillCircle(keyholeX, keyholeY, 7, DARK_GRAY);
+  tft.fillRect(keyholeX-3, keyholeY+4, 6, 12, DARK_GRAY);
+  tft.fillCircle(keyholeX, keyholeY+7, 2, BLACK);
+
+  // --- "Kilit Acildi" yazısı ortada, altta ---
+  tft.setTextColor(WHITE, BLACK);
+  tft.setTextSize(2);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("Kilit Acildi", centerX, bodyY + bodyH + 32);
+}
 
  void drawSafeDoorOpenScreen() {
    tft.fillScreen(BLACK);
